@@ -34,7 +34,7 @@ config t
 end
 
 !DHCP: DYNAMIC HOST CONFIGURATION PROTOCOL
-!@@@LEAF SWITCH
+!@@@COREBABA
 config t
 ip dhcp Excluded-add 10.~~.1.1 10.~~.1.100
 ip dhcp Excluded-add 10.~~.10.1 10.~~.10.100
@@ -127,14 +127,14 @@ config t
 	 ip add 11.0.0.1 255.255.255.255
  end
  
-!EDGE 1ST ROUTE TO MEET SIP PHONE
+!CSR 1ST ROUTE TO MEET SIP PHONE
  conf t
   ip routing
   ip route 10.~~.0.0 255.255.0.0 10.~~.1.4
  end
  
 !CME REGISTER
-!@EDGE - Session Initiation Protocol
+!@CSR - Session Initiation Protocol
 !Change SCCP mode to SIP mode
 !Phone SIP Registry
 conf t
@@ -157,6 +157,7 @@ voice register global
  authenticate register
  create profile
 !
+
 voice register dn 1
  number 1111
  name 1111
@@ -198,6 +199,7 @@ voice register dn 10
  name 1167
  allow watch
 !
+
 voice register pool 1
  type 8851
  id mac cafe.b0b0.fefe
@@ -210,6 +212,7 @@ voice register pool 1
  !username 11Passa password 11Passa
  codec g711ulaw
 !
+
 voice register pool 2
  type 8851
  id mac cafe.b0b0.fefe

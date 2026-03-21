@@ -1,4 +1,4 @@
-!@@@LeafSwitchONLY
+!@@@COREBABA
 config t
    hostname COREbaba-11
    enable secret pass
@@ -34,7 +34,7 @@ config t
 end
 
 !DHCP: DYNAMIC HOST CONFIGURATION PROTOCOL
-!@@@LEAF SWITCH
+!@@@COREBABA
 config t
 ip dhcp Excluded-add 10.11.1.1 10.11.1.100
 ip dhcp Excluded-add 10.11.10.1 10.11.10.100
@@ -125,8 +125,10 @@ config t
      description VIRTUALIP-FOR-ROUTING
 	 ip add 11.0.0.1 255.255.255.255
  end
+!
+
  
-!EDGE 1ST ROUTE TO MEET SIP PHONE
+!CSR 1ST ROUTE TO MEET SIP PHONE
  conf t
   ip routing
   ip route 10.11.0.0 255.255.0.0 10.11.1.4
