@@ -619,7 +619,7 @@ GRIRTO (for 80E): get router info routing-table ospf
 config firewall policy
  edit 1
  set name "VoIP-Allow"
- set srcintf "internal1"
+ set srcintf "internal1" 		
  set dstintf "wan1"
  set srcaddr "all"
  set dstaddr "all"
@@ -630,6 +630,7 @@ config firewall policy
  next
 end
 
+replace: set srcintf "port1" (if 80E Model)
 
 
 !!!CHECK IF ROUTING IS IN ORDER!!!
