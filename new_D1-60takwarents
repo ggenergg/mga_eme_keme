@@ -1,0 +1,700 @@
+TASK0: ACTIVATE CALL MANAGER EXPRESS (CME) FEATURE IN EDGE ROUTER
+!Connect the console cable to Edge Router and input the following after booting.
+!	> license boot level uck9 > do write > reload 
+!!	CME Will reboot to active Call Manager Express feature in Edge Router.
+
+
+
+TASK1: COLLAPSED BACKBONE: BASIC LAYER3 CONFIGURATION.
+!@@@CORE SWITCH SA TAAS
+config t
+   hostname COREtaas-31
+   enable secret pass
+   service password-encryption
+   no logging console
+   no ip domain-lookup
+   line console 0
+     password pass
+     login
+     exec-timeout 0 0
+    line vty 0 14
+      password pass
+      login
+      exec-timeout 0 0
+   Int Vlan 1
+     no shutdown
+	 ip add 10.31.1.2 255.255.255.0
+	 description MGMTDATA
+   Int Vlan 10
+     no shutdown
+	 ip add 10.31.10.2 255.255.255.0
+	 description WIRELESS
+   Int Vlan 50
+     no shutdown
+	 ip add 10.31.50.2 255.255.255.0
+	 description IPCCTV
+   Int Vlan 100
+     no shutdown
+	 ip add 10.31.100.2 255.255.255.0
+	 description VOICEVLAN
+end
+
+!( LINE 35 to 71 PASTE TO COREBABA SWITCH )
+!@@@LeafSwitchONLY
+config t
+   hostname COREbaba-31
+   enable secret pass
+   service password-encryption
+   no logging console
+   no ip domain-lookup
+   line console 0
+     password pass
+     login
+     exec-timeout 0 0
+    line vty 0 14
+      password pass
+      login
+      exec-timeout 0 0
+   Int Gi 0/1
+     no shutdown
+	  no switchport
+	  ip add 10.31.31.4 255.255.255.0
+   Int Vlan 1
+     no shutdown
+	 ip add 10.31.1.4 255.255.255.0
+	 description MGMTDATA
+   Int Vlan 10
+     no shutdown
+	 ip add 10.31.10.4 255.255.255.0
+	 description WIRELESS
+   Int Vlan 50
+     no shutdown
+	 ip add 10.31.50.4 255.255.255.0
+	 description IPCCTV
+   Int Vlan 100
+     no shutdown
+	 ip add 10.31.100.4 255.255.255.0
+	 description VOICEVLAN
+end
+
+WARNING: IF YOU SEE AMBER/ORANGE= NEEDS FIXING!!!
+Trunk Ports: switch to switch:
+TAAS/BABA: (Paste on COREtaas & COREbaba)
+config t
+Int Range fa0/10-12
+ ! shutdown
+ no shutdown
+ switchport trunk Encap Dot1Q
+ switchport mode trunk
+ do sh int trunk
+end
+
+CCNPSkillsNow: Etherchannel with LinkAggregationControlProtocol:
+WARNING: THREE CABLES IS BETTER THAN ONE!
+@taas/BABA: (Paste on COREtaas & COREbaba)
+config t
+Int Range fa0/10-12
+ channel-group 1 mode active
+ channel-protocol Lacp
+ do sh etherchannel summary
+ do sh int po1 | inc BW
+
+!DHCP: DYNAMIC HOST CONFIGURATION PROTOCOL
+!@@@LEAF SWITCH
+config t
+ip dhcp Excluded-add 10.31.1.1 10.31.1.100
+ip dhcp Excluded-add 10.31.10.1 10.31.10.100
+ip dhcp Excluded-add 10.31.50.1 10.31.50.100
+ip dhcp Excluded-add 10.31.100.1 10.31.100.100
+ip dhcp pool MGMTDATA
+   network 10.31.1.0 255.255.255.0
+   default-router 10.31.1.4
+   domain-name MGMTDATA.COM
+   dns-server 10.31.1.10
+ip dhcp pool WIFIDATA
+   network 10.31.10.0 255.255.255.0
+   default-router 10.31.10.4
+   domain-name WIFIDATA.COM
+   dns-server 10.31.1.10
+ip dhcp pool IPCCTV
+   network 10.31.50.0 255.255.255.0
+   default-router 10.31.50.4
+   domain-name IPCCTV.COM
+   dns-server 10.31.1.10
+ip dhcp pool VOICEVLAN
+   network 10.31.100.0 255.255.255.0
+   default-router 10.31.100.4
+   domain-name VOICEVLAN.COM
+   dns-server 10.31.1.10
+   option 150 ip 10.31.100.8
+   END
+
+!!CREATING AND PLACING PORTS INSIDEAVLAN:
+config t
+vlan 10
+   name WIFIVLAN
+vlan 50
+   name IPCCTVLAN
+vlan 69
+   name DELETEME
+vlan 70
+    name SELLME
+vlan 71
+    name HR
+vlan 100
+   name VOICEVLAN
+Int Fa 0/2
+  switchport mode access
+  switchport access vlan 10  
+Int Fa 0/4
+  switchport mode access
+  switchport access vlan 10
+Int Fa 0/6
+  switchport mode access
+  switchport access vlan 50  
+Int Fa 0/8
+  switchport mode access
+  switchport access vlan 50
+Int Fa 0/3
+  switchport mode access
+  switchport access vlan 100   
+Int Fa 0/5
+  switchport mode access  
+  switchport voice vlan 100
+  mls qos trust device cisco-phone 
+  switchport access vlan 1
+Int Fa 0/7
+  switchport mode access
+  switchport voice vlan 100 
+  mls qos trust device cisco-phone 
+ switchport access vlan 1
+ end
+
+!IP CAMERAS NEED MAC ADDRESS RESERVATION FOR FIXED IP SECURITY.  (LINE 144 to 151 PASTE TO COREBABA)
+config t
+ip routing
+ip dhcp pool CAMERA6
+host 10.31.50.6 255.255.255.0
+client-identifier 001a.0704.7f5b
+ip dhcp pool CAMERA8
+host 10.31.50.8 255.255.255.0
+client-identifier 001a.0709.c258 
+end
+show ip dhcp binding
+
+
+
+!!! GET THE MAC ADDS OF PHONES CONNECTED IN Fa0/5, Fa0/7 in COREBABA, enter "show mac address-table"
+!!!     >>>     100    c4c6.03f0.19b6    DYNAMIC     Fa0/5
+!!!				100    7c21.0dc7.2e00    DYNAMIC     Fa0/7
+!!!		>>>	SAVE THOSE FOR VOICE REGISTER CONFIG TO CME (Edge)
+
+
+!!!!RE-CONNECT COREBABA VIA TELNET @ 10.m.1.4 and then move console cable to EDGE (as CME)
+
+
+
+
+
+
+!@@@EDGE ROUTER as CME ROUTE CONFIG (Call Manager Express)
+config t
+   hostname CME-31
+   enable secret pass
+   service password-encryption
+   no logging console
+   no ip domain lookup
+   line console 0
+     password pass
+     login
+     exec-timeout 0 0
+    line vty 0 14
+      password pass
+	  transport input all
+      login
+      exec-timeout 0 0
+   Int Gi 0/0/0
+     description CME
+     ip add 10.31.100.8 255.255.255.0
+	 no shutdown
+ end
+ 
+ 
+ 
+!CME REGISTER
+!Change SCCP mode to SIP mode & !Phone SIP Registry
+conf t
+voice service voip
+ allow-connections h323 to sip
+ allow-connections sip to h323
+ allow-connections sip to sip
+ supplementary-service h450.12
+sip
+ transport switch udp tcp
+ bind control source-interface gi0/0/0
+ bind media source-interface gi0/0/0
+ registrar server expires max 3600 min 3600
+voice register global
+ mode cme
+ no auto-register
+ source-address 10.31.100.8 port 5060
+ max-dn 20
+ max-pool 20
+ authenticate register
+ create profile
+!
+voice register dn 1
+ number 3111
+ name 3111
+ allow watch
+voice register dn 2
+ number 3122
+ name 3122
+ allow watch
+voice register dn 3
+ number 3133
+ name 3133
+ allow watch
+voice register dn 4
+ number 3144
+ name 3144
+ allow watch
+voice register dn 5
+ number 3155
+ name 3155
+ allow watch
+voice register dn 6
+ number 3166
+ name 3166
+ allow watch
+voice register dn 7
+ number 3177
+ name 3177
+ allow watch
+voice register dn 8
+ number 3188
+ name 3188
+ allow watch
+voice register dn 9
+ number 3199
+ name 3199
+ allow watch
+voice register dn 10
+ number 3167
+ name 3167
+ allow watch
+!
+voice register pool 1
+ type 8851				
+ id mac c4c6.03f0.19b6
+ number 1 dn 1
+ number 2 dn 2
+ number 3 dn 3
+ number 4 dn 4
+ number 5 dn 5
+ dtmf-relay sip-notify
+ username 31Passa password 31Passa
+ codec g711ulaw
+ type 8851
+!
+voice register pool 2
+ type 8851				
+ id mac 7c21.0dc7.2e00
+ number 1 dn 6
+ number 2 dn 8
+ number 3 dn 9
+ number 4 dn 7
+ number 5 dn 10
+ dtmf-relay sip-notify
+ username 31Passb password 31Passb
+ codec g711ulaw
+ type 8851
+end
+
+!Register Phones Create
+conf t
+voice register global
+create profile sync syncinfo
+end
+
+!@incoming and outgoing
+conf t
+ voice service voip
+ ip address trusted list
+ ipv4 0.0.0.0 0.0.0.0
+ end
+
+!Dial-Peer Don't Touch yourself
+conf t
+ dial-peer voice 11 Voip
+  destination-pattern 11..
+  session target ipv4:10.11.100.8
+  codec g711ULAW
+ dial-peer voice 12 Voip
+  destination-pattern 12..
+  session target ipv4:10.12.100.8
+  codec g711ULAW
+ dial-peer voice 21 Voip
+  destination-pattern 21..
+  session target ipv4:10.21.100.8
+  codec g711ULAW
+ dial-peer voice 22 Voip
+  destination-pattern 22..
+  session target ipv4:10.22.100.8
+  codec g711ULAW
+ dial-peer voice 31 Voip
+  destination-pattern 31..
+  session target ipv4:10.31.100.8
+  codec g711ULAW
+ dial-peer voice 32 Voip
+  destination-pattern 32..
+  session target ipv4:10.32.100.8
+  codec g711ULAW
+ dial-peer voice 41 Voip
+  destination-pattern 41..
+  session target ipv4:10.41.100.8
+  codec g711ULAW
+ dial-peer voice 31 Voip
+  destination-pattern 31..
+  session target ipv4:10.31.100.8
+  codec g711ULAW
+ dial-peer voice 51 Voip
+  destination-pattern 51..
+  session target ipv4:10.51.100.8
+  codec g711ULAW
+ dial-peer voice 52 Voip
+  destination-pattern 52..
+  session target ipv4:10.52.100.8
+  codec g711ULAW
+ dial-peer voice 61 Voip
+  destination-pattern 61..
+  session target ipv4:10.61.100.8
+  codec g711ULAW
+ dial-peer voice 62 Voip
+  destination-pattern 62..
+  session target ipv4:10.62.100.8
+  codec g711ULAW
+ dial-peer voice 71 Voip
+  destination-pattern 71..
+  session target ipv4:10.71.100.8
+  codec g711ULAW
+ dial-peer voice 72 Voip
+  destination-pattern 72..
+  session target ipv4:10.72.100.8
+  codec g711ULAW
+ dial-peer voice 81 Voip
+  destination-pattern 81..
+  session target ipv4:10.81.100.8
+  codec g711ULAW
+ dial-peer voice 82 Voip
+  destination-pattern 82..
+  session target ipv4:10.82.100.8
+  codec g711ULAW
+ dial-peer voice 91 Voip
+  destination-pattern 91..
+  session target ipv4:10.91.100.8
+  codec g711ULAW
+ dial-peer voice 92 Voip
+  destination-pattern 92..
+  session target ipv4:10.92.100.8
+  codec g711ULAW
+ end
+ 
+ 
+ 
+
+ 
+ 
+!OSPF ROUTING
+!@CME: (Call Manager Express)
+config t
+router ospf 1
+router-id 10.31.100.8
+network 10.31.100.0  0.0.0.255  area 0
+end
+
+
+
+
+!OSPF on COREswitch
+!@CoreBABA:
+config t
+ip routing
+router ospf 1
+router-id 10.31.31.4
+network 10.31.0.0  0.0.255.255 area 0
+int gi 0/1
+ ip ospf network point-to-point
+end
+
+
+
+
+!IF IP PHONES STILL NOT REGISTERED / UNPROVISIONED:
+- check MAC Address entries
+- it can be also using "sh voice register tftp-bind" under CME, SEP****.xml must be registered.
+
+
+
+!!!!RE-CONNECT CME VIA TELNET @ 10.m.100.8 and then move console cable to FORTINET for configuration.
+
+
+@FORTINET
+! default login: admin / (blank password)
+
+
+!!!!for factory reset if necessary .... on/off the device until reboot, then pin the reset upon login prompt immediately .... admin / (blank) default login !!!!
+
+
+!!!!for 80E Models ONLY (pass this otherwise):
+Set Switchports to L3  "PORT1 MUST BE PART OF LAN"  = VLAN1
+config system virtual-switch
+    edit lan
+        config port
+            delete port1
+            delete port2
+        end
+    next
+end
+
+
+
+
+!!!Some Fortinet use Internal/Port modes depending on the version of Fortinet you are using
+!Delete 1st the virtual-swtich to  L3  "INTERNA1 MUST BE PART OF LAN"  = VLAN1
+config system virtual-switch
+ edit "internal"
+ config port
+ delete "internal1"
+ delete "internal2"
+ end
+ next
+ end
+
+!Set static mode to internal1
+config system interface
+ edit internal1
+  set mode static
+  set ip 10.31.31.1 255.255.255.0
+  set allowaccess ping https ssh telnet http
+  set role lan
+  set alias "INTERNAL"
+  set status up
+  end
+  
+  
+!Config Static IP Address
+config system interface
+ edit wan1
+  set mode static
+  set ip 200.0.0.31 255.255.255.0 
+  set allowaccess ping https ssh telnet
+  set role wan
+  set alias "INTERNET"
+  set status up
+  next
+ edit port1
+  set mode static
+  set ip 10.31.31.1 255.255.255.0
+  set allowaccess ping https ssh telnet http
+  set role lan
+  set alias "INTERNAL"
+  set status up
+  next
+edit loopback1
+  set vdom root
+  set mode static
+  set ip 31.0.0.1 255.255.255.255
+  set allowaccess ping
+  set type loopback
+  set status up
+ end
+end
+
+
+
+!!!!FOR IP CHECKING:
+get system interface physical			!(INTERNAL and WAN must have IP Addresses)
+
+
+/*
+FGT60ETK19030516 # get system interface physical 
+== [onboard]
+        ==[dmz]
+                mode: static
+                ip: 10.10.10.1 255.255.255.0
+                ipv6: ::/0
+                status: down
+                speed: n/a
+        ==[internal1]
+                mode: static
+                ip: 10.31.31.1 255.255.255.0
+                ipv6: ::/0
+                status: up
+                speed: 1000Mbps (Duplex: full)
+        ==[internal2]
+                mode: static
+                ip: 0.0.0.0 0.0.0.0
+                ipv6: ::/0
+                status: down
+                speed: n/a
+        ==[wan1]
+                mode: static
+                ip: 200.0.0.31 255.255.255.0
+                ipv6: ::/0
+                status: up
+*/
+
+
+
+
+
+
+!OSPF Routing on Fortinet
+config router ospf 
+ set router-id 31.0.0.1
+ set log-neighbour-changes enable
+ config area
+  edit 0.0.0.0
+   next
+   end
+ config network
+  edit 1
+   set area 0.0.0.0
+   set prefix 10.31.31.0 255.255.255.0
+   next
+  edit 2
+   set area 0.0.0.0
+   set prefix 200.0.0.0 255.255.255.0
+   next
+  edit 3
+   set area 0.0.0.0
+   set prefix  31.0.0.1 255.255.255.255
+   end
+ end
+
+
+
+
+
+!(for 60E) OSPF Routing Point-to-Point for Internal 1 and up on Fortinet
+config router ospf
+config ospf-interface
+  edit "internal1"
+   set interface "internal1"
+   set network-type point-to-point
+   next
+ end
+end
+
+
+
+
+
+!!(for 80E models only!!!) OSPF Routing Point-to-Point for Port 1 and up on Fortinet
+config router ospf
+config ospf-interface
+  edit "port1"
+   set interface "port1"
+   set network-type point-to-point
+   next
+ end
+end
+
+
+
+
+
+! SHOW COMMANDS ON FORTINET & ROUTING TABLE & NEIGHBORS on Fortinet
+GSIP: get system interface physical
+SRO: show router ospf
+GRION: get router info ospf neighbor
+GRIRTO (for 80E): get router info routing-table ospf 
+
+
+
+
+
+!Edit Firewall Policy to call other classmates on FIREWALL (Fortinet)
+config firewall policy
+ edit 1
+ set name "VoIP-Allow"
+ set srcintf "internal1"
+ set dstintf "wan1"
+ set srcaddr "all"
+ set dstaddr "all"
+ set action accept
+ set schedule "always"
+ set service "ALL"
+ set nat disable
+ next
+end
+
+
+
+
+
+!!!!RE-CONNECT FORTINET VIA TELNET @ 10.m.m.1, it will login if OSPF routing is in order.
+
+
+
+=========================END OF CONFIG============================
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// EME-KEME ONLY BELOW :
+
+
+
+
+
+
+OR via GUI
+|
+|
+- login to browser via 10.m.m.1
+- bypass the warning upon login
+- go to > NETWORK > INTERFACES > double-click any interfaces under "Hardware Switch" TABLE
+-
+
+
+
+
+
+
+
+> get system interface physical 
+     (equivalent to cisco's "show ip int br"
+
