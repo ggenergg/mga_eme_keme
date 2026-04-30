@@ -1,0 +1,88 @@
+Install-WindowsFeature RemoteAccess
+
+Install-WindowsFeature RSAT-RemoteAccess-PowerShell
+
+Install-WindowsFeature Routing
+
+
+
+Install-RemoteAccess -VpnType RoutingOnly
+
+
+Add-BgpRouter -BgpIdentifier 192.168.1.18 -LocalASN 100
+
+
+Add-BgpPeer -LocalIPAddress 192.168.1.18 -PeerIPAddress 192.168.1.1 -PeerASN 200 -Name Ciscorouter
+
+
+Cisco:
+config t
+ int lo100
+  ip add 192.168.100.1 255.255.255.0
+ int lo101
+  ip add 192.168.101.1 255.255.255.0
+ int lo102
+  ip add 192.168.102.1 255.255.255.0
+ int lo103
+  ip add 192.168.103.1 255.255.255.0
+ router bgp 200
+  bgp log-neighbor-changes
+  redistribute connected
+  neighbor 192.168.1.18 remote-as 100
+
+
+ON Windows:
+
+Add-BgpCustomRoute -network 172.16.0.0/24
+ 
+Add-BgpCustomRoute -network 172.16.1.0/24
+ 
+Add-BgpCustomRoute -network 172.16.2.0/24
+ 
+Add-BgpCustomRoute -network 172.16.3.0/24
+ 
+Add-BgpCustomRoute -network 172.16.4.0/24
+
+
+Add-BgpRouteAggregate -Prefix 172.16.0.0/22 -SummaryOnly Enabled
+
+
+On CiscoRouter
+show ip bgp
+show ip route bgp      172.16.0.0/24 is subnetted, 5 subnets
+B        172.16.0.0 [20/0] via 192.168.1.18, 00:00:08
+B        172.16.1.0 [20/0] via 192.168.1.18, 00:00:08
+B        172.16.2.0 [20/0] via 192.168.1.18, 00:00:08
+B        172.16.3.0 [20/0] via 192.168.1.18, 00:00:08
+B        172.16.4.0 [20/0] via 192.168.1.18, 00:00:08
+
+
+On Windows:
+
+Get-BGProuter
+
+Get-BgpPeer
+
+Get-BgpRouteInformation
+
+get-netroute -NextHop 10.10.13.171 | Sort-Object
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
