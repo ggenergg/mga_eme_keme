@@ -1,0 +1,995 @@
+D5 Final - SWITCHING
+
+-Madali-dali sa CCNA because mejo konti lang ang technologies, unlike sa routers na may mga routing protocols (IM.BODSS), ROUTE MANIPULATION sa BGP, VRF, VPN, CALL MANAGER, etc.
+
+-Primary Technology is VLAN, therefore the phone, IP Cams, and other devices should ping all via Layer 3 IP Routing technology (or SVI - Switched VLAN Interface).
+
+-Kailangan ba kabisado ang lahat ng command?, depende sa implementation field, pinaka common kasi is change VLANS gaya ng intership noon sa SVI na may area na pang-SMART, PLDT, 1-800-Flowers, European Cruise Line Company, may pwesto kasi na pag-umaga ay iba ang teams na naka-pwesto, at sa gabi ay iba rin, hindi pwedeng gamitin ang IP adds ng pang-umaga sa pang-gabi, so at the end shift ng pang umaga, change vlan lang para iba na ang access but same physical connection pa rin.
+
+
+
+TASK 1: Preparing the CORE Taas Switch for New Use.
+
+- erase startup-config OR wr er (Write Erase)
+
+- delete vlan database (vlan.dat), separate file kasi ito sa flash mem ni switch, kaya kahit dozens of WR ER and gawin, hindi rin clearing ang mga existed VLANS.
+
+- as usual, if may [Y/N].... CTRL+C agad.
+
+
+
+!@COREBABA (as always), do the usual Day 1 config for SWITCH (DHCP, VLAN)
+
+
+
+
+
+
+
+
+
+TASK 2: Getting preview of the more capabilities of Cisco Switch vs. Cheap Common Unmanagable *LINK Switches.
+
+- Review from Day 1 about sa trabaho ng mga Cisco Switched (VLAN, PoE, DHCP, ACL, etc., and more features later)
+
+- Hugot ka ng IP Phone, may mag-o-off, then saksak ulit, mag-o-ON, because of the 802.3af or POE (power over ethernet).
+
+- All switches (including mumurahins) has free VLAN 1 (default VLAN)... kita-kita lahat there, pag connected ang may virus, probably infested na rin sila. Malabong walang free VLAN, prove it...
+ 
+conf t
+ vlan 123
+ name BUDOL-VLAN
+ exit
+
+int range fa0/1-12
+ switchport mode access
+ switchport access vlan 123
+ exit
+
+ !wait until some greens...
+
+ no vlan 123
+
+ !kahit saan isaksak... mukhang defective ports na lahat.
+
+ !balik na sa dati
+
+conf t
+ int range fa0/1-12
+  switchport mode access
+  switchport access vlan 1
+ end
+ !wait until some greens...
+
+
+- (by default)... Sa lights ng parehong switches, may dalawa doon on na amber lang (in both switch of f0/10-12). Yun pa lang mismo ay may special power na agad ang switch... 
+
+
+
+
+
+
+
+The 802.1 Powers of Cisco Switches
+
+802.1q - Trunk / Aggregation [github lines 309]
+802.1d - STP (Spanning-Tree Protocol) [github lines 324]
+802.1w - RSTP (Rapid STP) [github lines 364]
+802.1s - Multi-Instance STP
+802.1x - Port Security
+
+
+
+
+
+
+
+
+TASK 3: STP - SPANNING TREE PROTOCOL (802.1d) [github lines 324]
+
+!SW-BABA / SW TAAS
+conf t 
+no spanning-tree vlan 1 - 100
+
+@cmd ping 10.100.100.200 :)
+!at mauulol yan :) :) :)
+
+
+switching loop, layer 2 loop, broadcast storm
+1-3 blinks/seconds -->> healthy
+7-9 blinks/seconds -->> unhealthy (pray and goodluck)
+
+!kung mumurahin na switch ito ginawa, ala na finish na, away-away na pareho yan
+
+
+!sa Cisco Switch... preventable yan
+!undo the storm
+-hugot iwan ulo si fa0/10 - 11
+
+-configure on both SW
+
+conf t
+  spanning-tree vlan 1
+
+
+
+
+sa CORESW na walang amber
+
+#sh spanning-tree vlan 1
+
+VLAN0001
+  Spanning tree enabled protocol ieee
+  Root ID    Priority    32769
+             Address     f025.726e.3a00
+             This bridge is the root*
+             Hello Time   2 sec  Max Age 20 sec  Forward Delay 15 sec
+
+  Bridge ID  Priority    32769  (priority 32768 sys-id-ext 1)*(SWITCH MO NA KINO-CONSOLE MISMO)
+             Address     f025.726e.3a00
+             Hello Time   2 sec  Max Age 20 sec  Forward Delay 15 sec
+             Aging Time  300 sec
+
+Interface           Role Sts Cost      Prio.Nbr Type
+------------------- ---- --- --------- -------- --------------------------------
+Fa0/1               Desg FWD 19        128.1    P2p 
+Fa0/10              Desg FWD 19        128.10   P2p 
+Fa0/11              Desg FWD 19        128.11   P2p 
+Fa0/12              Desg FWD 19        128.12   P2p 
+
+!!note mac ng bridge id
+
+
+
+sa CORESW na may amber
+COREbaba61#sh spanning-tree vlan 1
+
+VLAN0001
+  Spanning tree enabled protocol ieee
+  Root ID    Priority    32769
+             Address     f025.726e.3a00
+             Cost        19
+             Port        10 (FastEthernet0/10)
+             Hello Time   2 sec  Max Age 20 sec  Forward Delay 15 sec
+
+  Bridge ID  Priority    32769  (priority 32768 sys-id-ext 1)
+             Address     f025.72e9.8e80 (SWITCH MO NA KINO-CONSOLE MISMO)
+             Hello Time   2 sec  Max Age 20 sec  Forward Delay 15 sec
+             Aging Time  300 sec
+
+Interface           Role Sts Cost      Prio.Nbr Type
+------------------- ---- --- --------- -------- --------------------------------
+Fa0/10              Root FWD 19        128.10   P2p 
+Fa0/11              Altn BLK 19        128.11   P2p 
+Fa0/12              Altn BLK 19        128.12   P2p 
+
+
+
+!!note mac ng bridge id
+
+
+
+
+How to know who's the boss (ROOT BRIDGE / ALPHA SWITCH | sh spanning-tree vlan 1)
+1. Bridge Priority - 32768 (32769 kasi + 1 sa VLAN)
+2. MAC Address - LOWER Wins (kadalasan yung nakatatandang SW).
+
+
+
+
+
+
+!Maging boss ang SWbaba.
+!SWbaba if na hindi bossing
+
+    conf t
+	spanning-tree vlan 1 priority 16384 (must be div by 2)
+	!(palit bossing na)
+
+	spanning-tree vlan 1 root primary
+	!(palaging bossing na, kahit may mas mababang priority na nakakabit)
+
+	!para mas sure na boss talaga si corebaba
+	spanning-tree vlan 1 root secondary
+
+
+
+COREbaba#sh spanning-tree vlan 1
+
+VLAN0001
+  Spanning tree enabled protocol ieee
+  Root ID    Priority    16385
+             Address     f025.72e9.8e80
+             This bridge is the root
+             Hello Time   2 sec  Max Age 20 sec  Forward Delay 15 sec
+
+  Bridge ID  Priority    16385  (priority 16384 sys-id-ext 1)
+             Address     f025.72e9.8e80
+             Hello Time   2 sec  Max Age 20 sec  Forward Delay 15 sec
+             Aging Time  300 sec
+
+Interface           Role Sts Cost      Prio.Nbr Type
+------------------- ---- --- --------- -------- --------------------------------
+Fa0/10              Desg FWD 19        128.10   P2p 
+Fa0/11              Desg FWD 19        128.11   P2p 
+Fa0/12              Desg FWD 19        128.12   P2p 
+
+!SIYA ANG BOSS, NON-NEGOTIABLE, UUWI LANG AKO PAG GUSTO KO LANG!!!
+[kay kumander sana pwede it hue hue hue :) ]
+
+
+
+
+
+COREnotBoss# sh spanning-tree vlan 1
+
+VLAN0001
+  Spanning tree enabled protocol ieee
+  Root ID    Priority    16385
+             Address     f025.72e9.8e80
+             Cost        19
+             Port        10 (FastEthernet0/10)
+             Hello Time   2 sec  Max Age 20 sec  Forward Delay 15 sec
+
+  Bridge ID  Priority    32769  (priority 32768 sys-id-ext 1)
+             Address     f025.726e.3a00
+             Hello Time   2 sec  Max Age 20 sec  Forward Delay 15 sec
+             Aging Time  300 sec
+
+Interface           Role Sts Cost      Prio.Nbr Type
+------------------- ---- --- --------- -------- --------------------------------
+Fa0/1               Desg FWD 19        128.1    P2p  (PC)
+Fa0/10              Root FWD 19        128.10   P2p  (dito dumadaan lahat by default)
+Fa0/11              Altn BLK 19        128.11   P2p 
+Fa0/12              Altn BLK 19        128.12   P2p 
+
+
+
+
+ROOT BRIDGE - all ports DESGINATED (role) and FORWARDING (state)
+
+NON-ROOT BRIDGE:
+Role:			States:
+DESG (End Device)	FWD
+ROOT			FWD
+ALT			BLK
+
+
+
+ROOT PORT ELECTION (lower value is the boss):
+1. Prio.Nbr (128)
+2. Cost (19 - FE, 4-Gbe)
+3. Port Number (sa bossing, katapat sa non-RB)
+
+*It can only have 1 root port per non-root bridge
+(you cannot serve two masters)
+
+
+
+!@sa non-RB... wapakels sa RP election kasi hndi boss at sunod lng sya, try this..
+!PALIT Port 12baba - Port9 Baba
+
+COREtaas61#sh spanning-tree vlan 1
+
+VLAN0001
+  Spanning tree enabled protocol ieee
+  Root ID    Priority    16385
+             Address     f025.72e9.8e80
+             Cost        19
+             Port        12 (FastEthernet0/12)
+             Hello Time   2 sec  Max Age 20 sec  Forward Delay 15 sec
+
+  Bridge ID  Priority    32769  (priority 32768 sys-id-ext 1)
+             Address     f025.726e.3a00
+             Hello Time   2 sec  Max Age 20 sec  Forward Delay 15 sec
+             Aging Time  15  sec
+
+Interface           Role Sts Cost      Prio.Nbr Type
+------------------- ---- --- --------- -------- --------------------------------
+Fa0/1               Desg FWD 19        128.1    P2p 
+Fa0/10              Altn BLK 19        128.10   P2p 
+Fa0/11              Altn BLK 19        128.11   P2p 
+Fa0/12              Root FWD 19        128.12   P2p 
+
+
+
+
+COREbaba61#sh spanning-tree vlan 1
+
+VLAN0001
+  Spanning tree enabled protocol ieee
+  Root ID    Priority    16385
+             Address     f025.72e9.8e80
+             This bridge is the root
+             Hello Time   2 sec  Max Age 20 sec  Forward Delay 15 sec
+
+  Bridge ID  Priority    16385  (priority 16384 sys-id-ext 1)
+             Address     f025.72e9.8e80
+             Hello Time   2 sec  Max Age 20 sec  Forward Delay 15 sec
+             Aging Time  15  sec
+
+Interface           Role Sts Cost      Prio.Nbr Type
+------------------- ---- --- --------- -------- --------------------------------
+Fa0/9               Desg FWD 19        128.9    P2p 
+Fa0/10              Desg FWD 19        128.10   P2p 
+Fa0/11              Desg FWD 19        128.11   P2p 
+
+
+
+COREtaas61#sh spanning-tree vlan 1
+
+VLAN0001
+  Spanning tree enabled protocol ieee
+  Root ID    Priority    16385
+             Address     f025.72e9.8e80
+             Cost        19
+             Port        10 (FastEthernet0/10)
+             Hello Time   2 sec  Max Age 20 sec  Forward Delay 15 sec
+
+  Bridge ID  Priority    32769  (priority 32768 sys-id-ext 1)
+             Address     f025.726e.3a00    !---> MAC nya na hndi pang-bossing
+             Hello Time   2 sec  Max Age 20 sec  Forward Delay 15 sec
+             Aging Time  15  sec
+
+Interface           Role Sts Cost      Prio.Nbr Type
+------------------- ---- --- --------- -------- --------------------------------
+Fa0/1               Desg FWD 19        128.1    P2p 
+Fa0/10              Root LIS 19        128.10   P2p     !!!!!!
+Fa0/11              Altn BLK 19        128.11   P2p 
+
+
+(after 15 secs)
+Interface           Role Sts Cost      Prio.Nbr Type
+------------------- ---- --- --------- -------- --------------------------------
+Fa0/1               Desg FWD 19        128.1    P2p 
+Fa0/10              Root LRN 19        128.10   P2p     !!!!!!
+Fa0/11              Altn BLK 19        128.11   P2p 
+
+
+
+!(DO the diagram to know further about STP, eto yung may boss-alalay-alipin)
+!(Tapos trace STP RB sa RSTHayup and prove why D1 nor D2 ang bossing)
+
+more protocols other than STP:
+
+
+802.1q			   802.1d		          802.1w		802.1x
+Trunking protocol	    STP		                   RSTP			Port Security
+access port		role | states  		        improve STP
+trunk port		 root bridge		       role | states
+			       listening 15 sec	 designated | blocking  
+		               learning 15 sec	       root | forwarding	802.1s
+		  designated | forwarding  	  alternate | forwarding	
+  		       non root bridge
+                  designated | forwarding
+                 	root | forwarding
+                   alternate | blocking
+
+
+
+
+
+
+
+
+TASK 4:  RSTP - Rapid Spanning Tree Protocol, eliminates 30 secs convergence. [github lines 364]
+
+@SW Taas & Baba
+
+conf t
+	spanning-tree mode rapid-pvst    !both sw
+	
+	!ROOTBRIDGE only
+	spanning-tree backbonefast
+	!baka may warning na lalabas, wapakels yun.
+
+	!NON-ROOTBRIDGE only
+	spanning-tree uplinkfast
+	
+
+	int f0/1	!for end devices connected.
+		spanning-tree portfast 	 !end device only like PC
+
+
+
+
+
+
+
+
+
+TASK 5: 802.1Q DTP - Dynamic Trunking Protocol  [github lines 309]
+
+!both SW
+
+conf t
+int po1
+
+!required if L3 switch
+switchport trunk encapsulation dot1q
+
+switchport mode trunk
+end
+
+
+
+COREtaas61#sh ip int br
+Interface              IP-Address      OK? Method Status                Protocol
+Vlan1                  unassigned      YES unset  administratively down down    
+FastEthernet0/1        unassigned      YES unset  down                  down    
+FastEthernet0/2        unassigned      YES unset  down                  down    
+FastEthernet0/3        unassigned      YES unset  down                  down    
+FastEthernet0/4        unassigned      YES unset  down                  down    
+FastEthernet0/5        unassigned      YES unset  down                  down    
+FastEthernet0/6        unassigned      YES unset  down                  down    
+FastEthernet0/7        unassigned      YES unset  down                  down    
+FastEthernet0/8        unassigned      YES unset  down                  down    
+FastEthernet0/9        unassigned      YES unset  down                  down    
+FastEthernet0/10       unassigned      YES unset  up                    up      
+FastEthernet0/11       unassigned      YES unset  up                    up      
+FastEthernet0/12       unassigned      YES unset  up                    up      
+GigabitEthernet0/1     unassigned      YES unset  down                  down    
+Port-channel1          unassigned      YES unset  up                    up   *   
+
+
+
+COREtaas61#sh vlan br
+
+VLAN Name                             Status    Ports
+---- -------------------------------- --------- -------------------------------
+1    default                          active    Fa0/1, Fa0/3, Fa0/4, Fa0/5
+                                                Fa0/6, Fa0/7, Fa0/8, Fa0/9
+                                                Gi0/1
+10   VLAN0010                         active    Fa0/2
+
+
+!nawala si po1 kasi hindi na sya access port
+
+
+COREtaas61#sh int trunk
+
+Port        Mode             Encapsulation  Status        Native vlan
+Po1         on               802.1q         trunking      1
+
+Port        Vlans allowed on trunk
+Po1         1-4094
+
+Port        Vlans allowed and active in management domain
+Po1         1,10
+
+Port        Vlans in spanning tree forwarding state and not pruned
+Po1         1,10
+
+
+
+
+
+
+
+
+
+
+TASK 6: ETHERCHANNEL - Combine redundant ports into one single big link. Known also as AGGREGATION
+
+
+!both SW
+
+conf t
+	int range f0/10-12
+	channel-protocol lacp
+	channel-group 1 mode active
+	shut
+	no shut
+
+
+COREbaba61#sh spanning-tree vlan 1
+
+VLAN0001
+  Spanning tree enabled protocol rstp
+  Root ID    Priority    16385
+             Address     f025.72e9.8e80
+             This bridge is the root
+             Hello Time   2 sec  Max Age 20 sec  Forward Delay 15 sec
+
+  Bridge ID  Priority    16385  (priority 16384 sys-id-ext 1)
+             Address     f025.72e9.8e80
+             Hello Time   2 sec  Max Age 20 sec  Forward Delay 15 sec
+             Aging Time  300 sec
+
+Interface           Role Sts Cost      Prio.Nbr Type
+------------------- ---- --- --------- -------- --------------------------------
+Po1                 Desg FWD 9         128.64   P2p 
+
+
+
+
+
+COREbaba61#sh etherchannel summary
+Flags:  D - down        P - bundled in port-channel
+        I - stand-alone s - suspended
+        H - Hot-standby (LACP only)
+        R - Layer3      S - Layer2
+        U - in use      f - failed to allocate aggregator
+
+        M - not in use, minimum links not met
+        u - unsuitable for bundling
+        w - waiting to be aggregated
+        d - default port
+
+
+Number of channel-groups in use: 1
+Number of aggregators:           1
+
+Group  Port-channel  Protocol    Ports
+------+-------------+-----------+-----------------------------------------------
+1      Po1(SU)         LACP      Fa0/10(P)   Fa0/11(P)   Fa0/12(P)   
+
+
+!*LACP - Link Aggregation Channel Protocol (802.3ad standardized by IEEE) and vendor independent.
+       - modes Active and Passive, must be in mode active to both switches.
+
+!*Previously, there's PAgP (Port Aggregation Protocol), it is a Cisco-proprietary protocol that can be applied only on Cisco switches. 
+	- modes AUTO and Desirable.
+
+
+
+
+COREtaas61#sh interface port-channel 1
+Port-channel1 is up, line protocol is up (connected) 
+  Hardware is EtherChannel, address is f025.726e.3a0a (bia f025.726e.3a0a)
+  MTU 1500 bytes, BW 300000 Kbit, DLY 100 usec, 
+     reliability 255/255, txload 1/255, rxload 1/255 .......
+
+
+
+
+
+
+
+
+
+
+
+
+
+================
+
+
+
+
+Task 7: PORT-SECURITY 802.1x
+
+-mainam ito para sa mga aubisive employee sa internet, lalo na 1Gbps pa yung bandwidth
+-magtatanda ng mac sa specific port, pag may ibang kumabit, magkaka-aberya :)
+
+
+
+
+!Taas-SW
+
+conf t
+int f0/2
+	switchport mode access
+	switchport port-security
+	switchport port-security mac-address sticky !(OR hex.hex.hex. pang specific device)
+	switchport port-security maximum 1
+	
+	!the following pampa-kontra access kapag ibang device kinabit
+	
+	!mabait type
+	switchport port-security violation protect
+
+	!malupet type
+	switchport port-security violation restrict
+
+	!hayup type
+	switchport port-security violation shutdown
+end
+
+sh port-security address
+
+
+
+COREtaas61#sh port-security address
+          Secure Mac Address Table
+--------------------------------------------------------------------------
+Vlan    Mac Address       Type                       Ports   Remaining Age
+                                                                (mins)    
+----    -----------       ----                       -----   -------------
+  10    c025.a5c9.ffb3    SecureSticky               Fa0/2        -
+--------------------------------------------------------------------------
+Total Addresses in System (excluding one mac per port)     : 0
+Max Addresses limit in System (excluding one mac per port) : 6144
+
+
+!pag na-deads... #Evidence
+COREtaas61#sh int status err-disable
+
+Port      Name               Status       Reason               Err-disabled Vlans
+Fa0/2                        err-disabled psecure-violation
+
+
+~buhayin ang na-dead na port
+
+conf t
+int f0/2
+shut
+no shut
+end
+
+
+
+
+
+
+
+
+
+
+
+
+TASK 8: VLANs
+(sw TAAS)
+
+sh run | inc dhcp   !point out dhcp excludes, 3rd octet values
+sh run | sec dhcp pool    !mga ginawang listahang bigayan ng IP
+
+
+conf t
+int fa0/2
+switchport access vlan 10
+end
+
+sh vlan br	
+
+!laru-laruin nalang sa CORETaas :)
+
+
+!mag-uusap-usap ang mga devices on VLAN if
+!-same vlan
+!-different vlan but naka-SVI (Layer 3 SW) and/or VLAN Routing
+!-different vlan but magkaibang switch ???    :)
+
+!testing... core tass... 1 IP Phone --> port 3 taas, PC --->port 2
+
+
+conf t
+	int range f0/1-4
+	switchport mode access
+	switchport access vlan 888
+
+
+!-put static IP sa PC: 172.88.0.1/16
+!-put static IP sa IPhone: 172.88.0.2/16 (no DHCP, .255 if persisting def-router).
+
+
+
+
+
+
+
+
+TASK9: Multiple-instance STP
+
+maypagka-MultiCore (or Hyperthreading kumpara sa Intel CPU) si CISCO kaya malakas sya
+unlike sa cheap switches, kaso kadalasan pinaka nagta-trabaho ay yung CPU0,
+see the Windows TaskManager for more details.
+
+
+step1: Trunking must be enable to sync all Vlans with VTP(vlanTrunkingProtocol):
+TAAS/BABA: d1/d2
+config t
+vtp domain ccna
+vtp password pass
+vtp mode server	!(client sa baba)
+vtp version 2
+exit
+
+!(client sa BABA)
+
+step2: create vlans:
+TAAS lang:
+config t
+vlan 11-19
+exit
+vlan 21-29
+exit
+vlan 31-39
+exit
+BABA: sh vlan brief:
+
+@ENABLE SUPERMAN: 802.1S
+!{cpu1: vlan 11-19; cpu2: vlan 21-29; cpu3: vlan 31-39)
+
+@TAAs/BABA:
+CONFIG T
+spanning-tree mode mst
+spanning-tree mst configuration
+ name supermanstp
+ revision 1
+   Instance 1 vlan 11-19
+   Instance 2 vlan 21-29
+   Instance 3 vlan 31-39
+exit
+
+
+!BUT WAIT... NAGING V0V0 ULIT !!!
+
+
+!MAKE YOUR OWN SUPERMAN BOSSING:
+
+@Taas: Make Taas RootBridge again:
+config t
+spanning-tree mst 0 root primary
+spanning-tree mst 1 root primary
+spanning-tree mst 2 root Secondary
+spanning-tree mst 3 root Secondary
+
+@baba
+config t
+spanning-tree mst 0 root Secondary
+spanning-tree mst 1 root Secondary
+spanning-tree mst 2 root primary
+spanning-tree mst 3 root primary
+
+
+@either
+sh spanning-tree mst configuration 
+
+
+
+
+
+
+
+
+
+
+TASK 10: HIGH AVAILABILITY LAB EXERCISE LIKE REAL WORLD CAMPUS DESIGN (see the diagram)
+
+
+!RESET ALL SWITCHES and Re-CABLE according to the diagram.
+
+
+!BOTH SWITCHES
+
+conf t
+	default interface range f0/1-12
+	end
+
+
+conf t
+	int range f0/9-12
+	switchport trunk encapsulation dot1q
+	switchport mode trunk
+
+!partner must be done config and see each others trunk.
+!3 ports in CORE
+!2 ports in ACCESS
+
+COREtaas61#sh int trunk
+
+Port        Mode             Encapsulation  Status        Native vlan
+Fa0/9       on               802.1q         trunking      1
+Fa0/11      on               802.1q         trunking      1
+Fa0/12      on               802.1q         trunking      1
+
+Port        Vlans allowed on trunk
+Fa0/9       1-4094
+Fa0/11      1-4094
+Fa0/12      1-4094
+
+Port        Vlans allowed and active in management domain
+Fa0/9       1,10,80,99
+Fa0/11      1,10,80,99
+Fa0/12      1,10,80,99
+
+Port        Vlans in spanning tree forwarding state and not pruned
+Fa0/9       1,10
+Fa0/11      1,10
+Fa0/12      1,10,99
+
+
+
+
+
+
+COREbaba61#sh int trunk
+
+Port        Mode             Encapsulation  Status        Native vlan
+Fa0/10      on               802.1q         trunking      1
+Fa0/11      on               802.1q         trunking      1
+
+Port        Vlans allowed on trunk
+Fa0/10      1-4094
+Fa0/11      1-4094
+
+Port        Vlans allowed and active in management domain
+Fa0/10      1,10,25,50,100
+Fa0/11      1,10,25,50,100
+
+Port        Vlans in spanning tree forwarding state and not pruned
+Fa0/10      25,50,100
+Fa0/11      1,10,25,50,100
+
+
+
+
+!@CORETAAS (CORE/DISTRI)
+
+conf t
+int vlan 1
+no ip add
+ip add 10.0.0.1/2 255.0.0.0 (depende: 1-Front / 2-Rear)
+shut
+no shut
+end
+
+ping 10.0.0.p (parnter)
+
+@PC1 - IP 10.0.0.100/8 - 10.0.0.1 GW
+@PC2 - IP 10.0.0.200/8 - 10.0.0.1 GW
+
+
+!@CORE1 (CT Front Fa0/5) - 100.0.0.2/8
+conf t
+	hostname C??  (CORE1 kay front / CORE2 kay rear)
+	int fa0/5
+	no switchport         !(magrereklamo pag wala nito, iba ang routed sa switchport)
+	ip add 100.0.0.2 255.255.255.0   (200.0.0.2 kay rear)
+	no shut
+
+
+!@WAN/TELCO (Partner na may hawak ng Edge Router)
+conf t
+	hostname WAN-TELCO
+	int g0/0/0
+	no shut
+	no ip add
+	ip add 100.0.0.1 255.255.255.0
+
+	int g0/0/1
+	no shut
+	no ip add
+	ip add 200.0.0.1 255.255.555.0
+
+	int lo10
+	no shut
+	ip add 8.8.8.8 255.255.255.255
+	exit
+
+	router eigrp 100
+	no auto-summary
+	network 100.0.0.0
+	network 200.0.0.0
+	network 8.8.8.8
+	end
+wr
+!
+
+
+!for checking, @CORE1
+ping 100.0.0.1 
+
+
+
+
+
+@both CORES
+
+conf t
+	ip routing
+	router eigrp 100
+	no auto-summary
+
+!(routing pa-TELCO)
+	network 100.0.0.0    !(and 200.0.0.0 if CORE2)
+	
+!(routing sa Internal)	
+	network 10.0.0.0		
+	end
+wr
+
+!both cores ping 8.8.8.8
+
+
+
+
+
+!Apply 10.0.0.x VLAN IP on both CORES
+
+!SW-Taas Front
+conf t
+int vlan 1
+no ip add
+ip add 10.0.0.1 255.0.0.0 	!(or 10.0.0.20 sa CORE2) 
+shut
+no shut
+end
+
+!ping 10.0.0.1 both PC
+
+
+
+
+
+***************************
+Halimbawa na-sheep si CORE1, hndi naman practical na
+i-config lahat ng GW sa 10.0.0.20, madali siguro kung 
+pang-School COMLAB lang, pero sa company na maraming 
+floors super-duper hassle yun.
+
+Dito na papasok ang isa sa mga pang-High Availability ni CISCO.
+***************************
+
+
+
+
+!HSRP - Hot Standby Routing Protocol
+(kapag na deads si CORE1, connect sa standby na CORE2,
+but we need to remedyo the VLAN1 ni CORE1 sa 10.0.0.10)
+
+conf t
+	int vlan 1
+	no ip add
+	ip add 10.0.0.10 255.0.0.0
+	shut
+	no shut
+
+
+
+
+
+
+
+!BOTH CORES CONFIGURE FOR HSRP
+conf t
+int vlan 1
+	!gagawa ng VirtualIP para lahat dito gateway kahit down ang mga CORES
+	standby 1 ip 10.0.0.1
+
+	!pang core1 lang - vlan muna para simulated sa CORE pero WAN int talaga.
+	standby 1 priority 100
+	standby 1 track vlan 1
+
+	!pang core2 lang
+	standby 1 priority 95
+	standby 1 track vlan 1
+			
+	!core1 lng! 
+	standby 1 preempt 
+
+	!preempt is para bumalik kay core1 pag nag-up ulit.
+
+	end
+
+
+
+COREtaas61#show standby brief 
+                     P indicates configured to preempt.
+                     |
+Interface   Grp  Pri P State   Active          Standby         Virtual IP
+Vl1         1    200 P Standby 10.0.0.3        local           10.0.0.1
+
+
+
+
+!down si Core1....
+
+COREtaas61#show standby brief
+                     P indicates configured to preempt.
+                     |
+Interface   Grp  Pri P State   Active          Standby         Virtual IP
+Vl1         1    150   Active  local           unknown         10.0.0.1
+
+	
+================================
+
+Final Task: Manifest your passing in CCNA, of course you have to be prepared.
+
+Bigay Dumps, tska yung ginamit ko last CCNPWars 2022
+
+
+
+
+
