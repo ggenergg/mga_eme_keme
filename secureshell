@@ -1,0 +1,77 @@
+To configure basic SSH access on a Cisco IOS router or switch, you need to fulfill a few global prerequisites (like setting a hostname and domain name) 
+before generating the encryption keys and forcing the virtual lines to accept SSH.
+
+
+Step-by-Step ConfigurationEnter global configuration mode first:
+
+Router> enable
+Router# configure terminal
+
+
+
+
+
+Cisco IOS uses the device hostname and IP domain name together to name the cryptographic keys.
+
+Router(config)# hostname R1
+R1(config)# ip domain-name yourdomain.com
+
+
+
+
+
+Create a Local User Account - You need a local account to log in via SSH. Using secret instead of password ensures the password is encrypted 
+with a strong hash inside the configuration.
+
+R1(config)# username admin privilege 15 secret YourSecurePassword
+
+
+
+
+
+Generate the RSA key pairs that will encrypt your SSH traffic.
+
+crypto key generate rsa
+! input--> 2048
+
+
+
+By default, Cisco IOS may fall back to the older, insecure SSH version 1. 
+Force the device to use version 2 only
+
+ip ssh version 2
+
+
+
+
+Configure the Virtual Terminal (VTY) lines to check the local user database for authentication, and block insecure Telnet traffic entirely.
+
+R1(config)# line vty 0 4
+R1(config-line)# login local
+R1(config-line)# transport input ssh
+R1(config-line)# exit
+
+
+
+Check SSH status: Validate if the server is running and see what version is active.
+
+show ip ssh
+
+
+
+
+Confirm that your 2048-bit RSA key was created successfully.
+
+R1# show crypto key mypubkey rsa
+
+
+
+
+You can test connecting from another Cisco device using the built-in client:
+
+Router# ssh -l admin <IP_ADDRESS_OF_HOST>
+
+
+
+
+
